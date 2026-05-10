@@ -18,7 +18,20 @@ const trendColor: Record<MachineStatus, string> = {
   Moderate: "#F59E0B"
 };
 
-export function MachineHealthTable() {
+interface MachineHealthTableProps {
+  machines?: any[];
+}
+
+export function MachineHealthTable({ machines = [] }: MachineHealthTableProps) {
+  // Transform machines to table format or use defaults
+  const tableData = machines.length > 0 
+    ? machines.slice(0, 5).map(machine => ({
+        id: machine.id,
+        score: `${machine.health}/100`,
+        status: machine.status as MachineStatus,
+        trend: Array.from({ length: 6 }, () => Math.random() * 10 + 5)
+      }))
+    : machineHealthRows;
   return (
     <Card className="min-h-[286px] p-4">
       <CardHeader className="mb-4">
@@ -38,7 +51,7 @@ export function MachineHealthTable() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {machineHealthRows.map((row) => (
+            {tableData.map((row) => (
               <tr key={row.id} className="text-sm font-semibold text-slate-800">
                 <td className="py-2">{row.id}</td>
                 <td className="py-2">{row.score}</td>

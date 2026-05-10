@@ -13,7 +13,18 @@ import {
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { rulTrend } from "@/data/dashboard-data";
 
-export function RulTrendChart() {
+interface RulTrendChartProps {
+  predictions?: any[];
+}
+
+export function RulTrendChart({ predictions = [] }: RulTrendChartProps) {
+  // Transform predictions to chart data or use defaults
+  const chartData = predictions.length > 0 
+    ? predictions.slice(0, 7).map((p, i) => ({
+        date: `Day ${i + 1}`,
+        hours: Math.round(p.rulHours)
+      }))
+    : rulTrend;
   return (
     <Card className="min-h-[286px] p-4">
       <CardHeader>
@@ -25,7 +36,7 @@ export function RulTrendChart() {
       </CardHeader>
       <div className="mt-3 h-[218px]">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={rulTrend} margin={{ top: 15, right: 16, bottom: 0, left: -15 }}>
+          <AreaChart data={chartData} margin={{ top: 15, right: 16, bottom: 0, left: -15 }}>
             <defs>
               <linearGradient id="rulFill" x1="0" x2="0" y1="0" y2="1">
                 <stop offset="0%" stopColor="#2563EB" stopOpacity={0.18} />

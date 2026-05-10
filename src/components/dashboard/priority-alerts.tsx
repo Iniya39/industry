@@ -15,7 +15,11 @@ const alertTone: Record<Severity, { badge: "red" | "orange"; circle: string; ico
   Medium: { badge: "orange", circle: "bg-amber-50", icon: "text-amber-500" }
 };
 
-export function PriorityAlerts() {
+interface PriorityAlertsProps {
+  alerts?: any[];
+}
+
+export function PriorityAlerts({ alerts = priorityAlerts }: PriorityAlertsProps) {
   const router = useRouter();
 
   return (

@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/dashboard/empty-state";
 import { HealthRing } from "@/components/dashboard/health-ring";
 import { MiniTrend } from "@/components/dashboard/mini-trend";
 import { machines, machineHealthRows, type MachineStatus } from "@/data/dashboard-data";
+import { useRealtimeData, transformMachineToLegacyFormat } from "@/lib/real-time-data-provider";
 import { notify } from "@/components/dashboard/toast-host";
 
 const statusTone: Record<MachineStatus, "green" | "orange" | "red" | "slate"> = {
@@ -21,17 +22,21 @@ const statusTone: Record<MachineStatus, "green" | "orange" | "red" | "slate"> = 
 };
 
 export default function MachinesPage() {
+  const { machines: realtimeMachines } = useRealtimeData();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All");
-  const [selected, setSelected] = useState<(typeof machines)[number] | null>(null);
+  const [selected, setSelected] = useState<any | null>(null);
+
+  // Transform real-time machines to legacy format
+  const legacyMachines = realtimeMachines.map(machine => transformMachineToLegacyFormat(machine));
 
   const filtered = useMemo(() => {
-    return machines.filter((machine) => {
+    return legacyMachines.filter((machine) => {
       const matchesQuery = `${machine.id} ${machine.name} ${machine.area}`.toLowerCase().includes(query.toLowerCase());
       const matchesStatus = status === "All" || machine.status === status;
       return matchesQuery && matchesStatus;
     });
-  }, [query, status]);
+  }, [query, status, legacyMachines]);
 
   return (
     <div className="mt-7 space-y-5">

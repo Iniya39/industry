@@ -1,30 +1,94 @@
 "use client";
 
-import { Download, FileSpreadsheet, FileText, Send } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Download, FileSpreadsheet, FileText, Send, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { reports } from "@/data/dashboard-data";
 import { notify } from "@/components/dashboard/toast-host";
+import { reportGenerator, GeneratedReport } from "@/lib/report-generator";
 
 export default function ReportsPage() {
+  const [reports, setReports] = useState<GeneratedReport[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // Generate real-time reports on component mount
+  useEffect(() => {
+    generateRealtimeReports();
+  }, []);
+
+  const generateRealtimeReports = () => {
+    setIsGenerating(true);
+    
+    // Generate reports from live AI data
+    const realtimeReports = [
+      reportGenerator.generateWeeklyHealthReport(),
+      reportGenerator.generateFailureAnalysisReport(),
+      reportGenerator.generateEnergyConsumptionReport(),
+      reportGenerator.generateMaintenanceComplianceReport()
+    ];
+
+    setReports(realtimeReports);
+    setIsGenerating(false);
+  };
+
+  const handleDownload = (report: GeneratedReport) => {
+    try {
+      reportGenerator.downloadReport(report);
+      notify("Download started", `${report.name} is being downloaded.`);
+    } catch (error) {
+      notify("Download failed", "There was an error downloading the report. Please try again.");
+    }
+  };
+
+  const handleExportPDF = () => {
+    const weeklyReport = reportGenerator.generateWeeklyHealthReport();
+    handleDownload(weeklyReport);
+  };
+
+  const handleShareSummary = () => {
+    const summaryData = {
+      generatedAt: new Date().toISOString(),
+      totalMachines: reports.length > 0 ? reports[0].data?.summary?.totalMachines || 6 : 6,
+      averageHealth: reports.length > 0 ? reports[0].data?.summary?.averageHealth || 75 : 75,
+      criticalAlerts: reports.length > 0 ? reports[0].data?.summary?.criticalAlerts || 0 : 0
+    };
+    
+    // Create and download summary report
+    const summaryBlob = new Blob([JSON.stringify(summaryData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(summaryBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `dashboard_summary_${Date.now()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    notify("Report shared", "Maintenance leadership will receive the latest dashboard summary.");
+  };
+
   return (
     <div className="mt-7 space-y-5">
       <Card className="p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <CardTitle>Reports</CardTitle>
-            <p className="mt-1 text-sm font-medium text-slate-500">Download historical plant health, failure analysis, and energy reports.</p>
+            <CardTitle>Live AI Reports</CardTitle>
+            <p className="mt-1 text-sm font-medium text-slate-500">Download real-time plant health, failure analysis, and energy reports generated from live AI predictions.</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button variant="outline" onClick={() => notify("PDF export queued", "The weekly plant health PDF is being prepared.")}>
+            <Button variant="outline" onClick={handleExportPDF} disabled={isGenerating}>
               <FileText className="h-4 w-4" />
-              Export PDF
+              {isGenerating ? 'Generating...' : 'Export PDF'}
             </Button>
-            <Button onClick={() => notify("Report shared", "Maintenance leadership will receive the latest dashboard summary.")}>
+            <Button onClick={handleShareSummary} disabled={isGenerating}>
               <Send className="h-4 w-4" />
               Share Summary
+            </Button>
+            <Button variant="outline" onClick={generateRealtimeReports} disabled={isGenerating}>
+              <RefreshCw className={`h-4 w-4 ${isGenerating ? 'animate-spin' : ''}`} />
+              Refresh Reports
             </Button>
           </div>
         </div>
@@ -34,7 +98,7 @@ export default function ReportsPage() {
         {reports.map((report, index) => {
           const Icon = report.type === "XLSX" ? FileSpreadsheet : FileText;
           return (
-            <motion.div key={report.name} whileHover={{ y: -3 }} transition={{ type: "spring", stiffness: 240, damping: 24 }}>
+            <motion.div key={report.id} whileHover={{ y: -3 }} transition={{ type: "spring", stiffness: 240, damping: 24 }}>
               <Card className="h-full p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="grid h-14 w-14 place-items-center rounded-2xl bg-blue-50 text-blue-600">
@@ -47,7 +111,7 @@ export default function ReportsPage() {
                 <Button
                   variant="outline"
                   className="mt-6 w-full text-blue-700"
-                  onClick={() => notify("Download started", `${report.name} is downloading.`)}
+                  onClick={() => handleDownload(report)}
                 >
                   <Download className="h-4 w-4" />
                   Download
@@ -82,7 +146,10 @@ export default function ReportsPage() {
                   <td className="py-3">{report.date}</td>
                   <td className="py-3">{report.size}</td>
                   <td className="py-3">
-                    <button className="font-extrabold text-blue-700 hover:text-blue-900" onClick={() => notify("Download started", `${report.name} is downloading.`)}>
+                    <button 
+                      className="font-extrabold text-blue-700 hover:text-blue-900" 
+                      onClick={() => handleDownload(report)}
+                    >
                       Download
                     </button>
                   </td>

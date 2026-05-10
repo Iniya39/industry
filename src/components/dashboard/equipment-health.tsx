@@ -16,8 +16,24 @@ const metricIcon = {
   Load: CircleGauge
 };
 
-export function EquipmentHealth() {
-  const score = 78;
+interface EquipmentHealthProps {
+  machines?: any[];
+}
+
+export function EquipmentHealth({ machines = [] }: EquipmentHealthProps) {
+  // Calculate real-time health score from machines
+  const score = machines.length > 0 
+    ? Math.round(machines.reduce((sum, m) => sum + m.health, 0) / machines.length)
+    : 78;
+
+  // Get real-time metrics from first machine or use defaults
+  const primaryMachine = machines[0];
+  const realtimeMetrics = primaryMachine ? [
+    { label: "Vibration", value: primaryMachine.vibration || "2.1 mm/s", status: primaryMachine.health > 70 ? "Good" : "Warning" },
+    { label: "Temperature", value: `${Math.round((primaryMachine.latestReading?.temperature || 65))}°C`, status: primaryMachine.health > 70 ? "Good" : "Warning" },
+    { label: "Pressure", value: `${(primaryMachine.latestReading?.pressure || 1.2).toFixed(1)} bar`, status: primaryMachine.health > 70 ? "Good" : "Warning" },
+    { label: "Load", value: primaryMachine.load || "65%", status: primaryMachine.load && parseInt(primaryMachine.load) > 80 ? "Warning" : "Good" }
+  ] : healthMetrics;
   const circumference = 2 * Math.PI * 43;
 
   return (
@@ -78,7 +94,7 @@ export function EquipmentHealth() {
           </div>
 
           <div className="space-y-3">
-            {healthMetrics.map((metric) => {
+            {realtimeMetrics.map((metric) => {
               const Icon = metricIcon[metric.label as keyof typeof metricIcon] || Droplet;
               return (
                 <div key={metric.label} className="grid grid-cols-[1fr_auto_auto] items-center gap-5 text-sm">
