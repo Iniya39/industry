@@ -63,6 +63,15 @@ class AlertData(BaseModel):
     timestamp: datetime
     acknowledged: bool = False
 
+class NotificationRequest(BaseModel):
+    type: str
+    recipient: str
+    subject: str
+    message: str
+    priority: str
+    machineId: str
+    alertId: Optional[str] = None
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Industrial AI Predictive Maintenance API",
@@ -471,14 +480,10 @@ async def startup_event():
 if __name__ == "__main__":
     import uvicorn
     
-    # Start background monitoring task
-    asyncio.create_task(background_monitoring())
-    
     # Run the FastAPI app
     uvicorn.run(
         app,
-        host="0.0.0.0.0",
+        host="0.0.0.0",
         port=8000,
-        ws="app",
         log_level="info"
     )
