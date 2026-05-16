@@ -3,7 +3,7 @@ import { z } from "zod";
 
 const router: IRouter = Router();
 
-const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? "http://localhost:8090";
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? "http://127.0.0.1:8090";
 
 const MachineReadingSchema = z.object({
   machineId: z.string(),

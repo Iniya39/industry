@@ -5,17 +5,18 @@ import { DashCard, DashCardHeader, DashCardTitle } from "@/components/dashboard/
 import { DashBadge } from "@/components/dashboard/badge";
 import { SearchField } from "@/components/dashboard/search-field";
 import { EmptyState } from "@/components/dashboard/empty-state";
-import { alertTimeline, priorityAlerts, type Severity } from "@/data/dashboard-data";
+import { usePredictions } from "@/context/prediction-context";
+import { MACHINE_CONFIGS } from "@/lib/machine-config";
 import { notify } from "@/components/dashboard/toast-host";
 import { cn } from "@/lib/utils";
 
-const severityTone: Record<Severity, "red" | "orange"> = {
+const severityTone: Record<string, "red" | "orange"> = {
   Critical: "red",
   High: "orange",
   Medium: "orange"
 };
 
-const iconBg: Record<Severity, string> = {
+const iconBg: Record<string, string> = {
   Critical: "bg-rose-50 text-rose-600",
   High: "bg-orange-50 text-orange-500",
   Medium: "bg-amber-50 text-amber-500"
@@ -23,25 +24,34 @@ const iconBg: Record<Severity, string> = {
 
 export default function AlertsPage() {
   const [query, setQuery] = useState("");
-  const [severity, setSeverity] = useState("All");
+  const [severityFilter, setSeverityFilter] = useState("All");
+  const { predictions } = usePredictions();
+
+  const generatedAlerts = useMemo(() => {
+    return predictions.flatMap((p) =>
+      p.alerts.map((msg, i) => {
+        const severity = p.status === "Critical" ? "Critical" : p.status === "Warning" ? "High" : "Medium";
+        return {
+          machine: MACHINE_CONFIGS.find((c) => c.machineId === p.machineId)?.machineName ?? p.machineId,
+          severity,
+          description: msg,
+          title: msg,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          sortScore: p.status === "Critical" ? 3 : p.status === "Warning" ? 2 : 1
+        };
+      })
+    ).sort((a, b) => b.sortScore - a.sortScore);
+  }, [predictions]);
 
   const alerts = useMemo(() => {
-    const merged = [
-      ...priorityAlerts.map((a) => ({ ...a, title: a.description })),
-      ...alertTimeline.map((a) => ({
-        machine: a.machine,
-        severity: a.severity,
-        description: a.title,
-        time: a.time,
-        title: a.title
-      }))
-    ];
-    return merged.filter((a) => {
+    return generatedAlerts.filter((a) => {
       const matchesQuery = `${a.machine} ${a.description}`.toLowerCase().includes(query.toLowerCase());
-      const matchesSeverity = severity === "All" || a.severity === severity;
+      const matchesSeverity = severityFilter === "All" || a.severity === severityFilter;
       return matchesQuery && matchesSeverity;
     });
-  }, [query, severity]);
+  }, [generatedAlerts, query, severityFilter]);
+
+  const alertTimeline = generatedAlerts.slice(0, 10);
 
   return (
     <div className="mt-7 grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
@@ -57,9 +67,9 @@ export default function AlertsPage() {
               {["All", "Critical", "High", "Medium"].map((item) => (
                 <button
                   key={item}
-                  onClick={() => setSeverity(item)}
+                  onClick={() => setSeverityFilter(item)}
                   className={`h-12 rounded-2xl border px-4 text-sm font-bold transition ${
-                    severity === item ? "border-blue-600 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-600 hover:border-blue-200"
+                    severityFilter === item ? "border-blue-600 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-600 hover:border-blue-200"
                   }`}
                 >
                   {item}
@@ -91,13 +101,13 @@ export default function AlertsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.03 }}
               >
-                <span className={cn("grid h-12 w-12 place-items-center rounded-full", iconBg[alert.severity])}>
+                <span className={cn("grid h-12 w-12 place-items-center rounded-full", iconBg[alert.severity] || iconBg.Medium)}>
                   <AlertTriangle className="h-6 w-6" />
                 </span>
                 <span className="min-w-0">
                   <span className="flex flex-wrap items-center gap-2">
                     <span className="font-extrabold text-slate-950">{alert.machine}</span>
-                    <DashBadge tone={severityTone[alert.severity]}>{alert.severity}</DashBadge>
+                    <DashBadge tone={severityTone[alert.severity] || "orange"}>{alert.severity}</DashBadge>
                   </span>
                   <span className="mt-1 block text-sm font-medium text-slate-500">{alert.description}</span>
                 </span>
@@ -116,8 +126,8 @@ export default function AlertsPage() {
           <Clock3 className="h-5 w-5 text-blue-600" />
         </DashCardHeader>
         <div className="space-y-0">
-          {alertTimeline.map((event, index) => (
-            <div key={`${event.time}-${event.title}`} className="grid grid-cols-[74px_20px_1fr] gap-3">
+          {alertTimeline.length > 0 ? alertTimeline.map((event, index) => (
+            <div key={`${event.time}-${event.title}-${index}`} className="grid grid-cols-[74px_20px_1fr] gap-3">
               <div className="pt-1 text-sm font-extrabold text-slate-500">{event.time}</div>
               <div className="relative flex justify-center">
                 <span className={cn("mt-1 h-3 w-3 rounded-full", event.severity === "Critical" ? "bg-rose-600" : "bg-amber-500")} />
@@ -128,7 +138,9 @@ export default function AlertsPage() {
                 <p className="mt-1 text-sm font-medium text-slate-500">{event.machine}</p>
               </div>
             </div>
-          ))}
+          )) : (
+            <EmptyState title="No active timeline" description="No alerts generated yet." />
+          )}
         </div>
       </DashCard>
     </div>
