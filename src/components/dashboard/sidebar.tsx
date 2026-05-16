@@ -7,6 +7,7 @@ import {
   Activity,
   AlertTriangle,
   BarChart3,
+  Cpu,
   FileText,
   Gauge,
   Grid2X2,
@@ -20,6 +21,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { label: "Overview", icon: Grid2X2, href: "/overview" },
   { label: "Machines", icon: Gauge, href: "/machines" },
+  { label: "Sensors", icon: Cpu, href: "/sensors" },
   { label: "Alerts", icon: AlertTriangle, href: "/alerts" },
   { label: "Analytics", icon: BarChart3, href: "/analytics" },
   { label: "Maintenance", icon: Wrench, href: "/maintenance" },

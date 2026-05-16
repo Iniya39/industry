@@ -23,7 +23,7 @@ export interface UseRealtimeDataOptions {
 
 export function useRealtimeData(options: UseRealtimeDataOptions = {}) {
   const { updateInterval = 1000, autoStart = true } = options;
-  
+
   const [data, setData] = useState<RealtimeData>({
     machines: [],
     predictions: [],
@@ -33,12 +33,18 @@ export function useRealtimeData(options: UseRealtimeDataOptions = {}) {
     lastUpdate: Date.now()
   });
 
-  const updateData = useCallback(() => {
+  const updateData = useCallback(async () => {
     try {
-      const machines = sensorSimulator.getMachineStates();
-      const predictions = aiPredictionPipeline.getAllPredictions();
-      const criticalAlerts = aiPredictionPipeline.getCriticalAlerts();
-      const highPriorityAlerts = aiPredictionPipeline.getHighPriorityAlerts();
+      const res = await fetch("http://127.0.0.1:8000/api/machines");
+      const apiData = await res.json();
+
+      const machines = apiData.machines || [];
+
+      // TEMPORARY empty predictions
+      const predictions = [];
+
+      const criticalAlerts = [];
+      const highPriorityAlerts = [];
 
       setData(prev => ({
         ...prev,
@@ -82,7 +88,7 @@ export function useRealtimeData(options: UseRealtimeDataOptions = {}) {
     sensorSimulator.startSimulation();
     aiPredictionPipeline.startPredictionPipeline();
     updateData();
-  }, [updateData]);
+  }, [updateData]); const machines = sensorSimulator.getMachineStates();
 
   const stopSimulation = useCallback(() => {
     sensorSimulator.stopSimulation();
@@ -103,7 +109,7 @@ export function useRealtimeData(options: UseRealtimeDataOptions = {}) {
 
 export function useMachineData(machineId: string) {
   const realtimeData = useRealtimeData();
-  
+
   const machine = realtimeData.machines.find(m => m.id === machineId);
   const prediction = realtimeData.predictions.find(p => p.machineId === machineId);
   const sensorHistory = machine ? sensorSimulator.getSensorHistory(machineId, 50) : [];
@@ -120,7 +126,7 @@ export function useMachineData(machineId: string) {
 
 export function useAggregatedStats() {
   const realtimeData = useRealtimeData();
-  
+
   const stats = {
     totalMachines: realtimeData.machines.length,
     healthyMachines: realtimeData.machines.filter(m => m.health > 70).length,
@@ -146,7 +152,7 @@ export function useAggregatedStats() {
 // Utility functions for data transformation
 export function transformMachineToLegacyFormat(machine: MachineState, prediction?: AIPrediction) {
   const latestReading = sensorSimulator.getLatestSensorReading(machine.id);
-  
+
   return {
     id: machine.id,
     name: machine.name,
@@ -167,12 +173,12 @@ export function transformMachineToLegacyFormat(machine: MachineState, prediction
 
 export function transformPredictionToAlertFormat(prediction: AIPrediction) {
   const machine = sensorSimulator.getMachineState(prediction.machineId);
-  
+
   return {
     machine: machine?.name || prediction.machineId,
-    severity: prediction.maintenanceUrgency === 'critical' ? 'Critical' : 
-              prediction.maintenanceUrgency === 'high' ? 'High' : 
-              prediction.maintenanceUrgency === 'medium' ? 'Medium' : 'Low',
+    severity: prediction.maintenanceUrgency === 'critical' ? 'Critical' :
+      prediction.maintenanceUrgency === 'high' ? 'High' :
+        prediction.maintenanceUrgency === 'medium' ? 'Medium' : 'Low',
     description: prediction.predictedFailures[0]?.description || 'Performance degradation detected',
     time: formatTimeAgo(prediction.timestamp),
     confidence: prediction.predictedFailures[0]?.confidence || 0,

@@ -10,6 +10,22 @@ from datetime import datetime
 import json
 import asyncio
 import uvicorn
+from influxdb_client import InfluxDBClient
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+print(os.getenv("INFLUX_URL"))
+print(os.getenv("INFLUX_TOKEN"))
+print(os.getenv("INFLUX_ORG"))
+
+client = InfluxDBClient(
+    url=os.getenv("INFLUX_URL"),
+    token=os.getenv("INFLUX_TOKEN"),
+    org=os.getenv("INFLUX_ORG")
+)
+
+query_api = client.query_api()
 
 # Import our database services
 from database_service import DatabaseService
@@ -240,37 +256,48 @@ async def get_notification_history(limit: int = 50):
 
 @app.get("/api/machines")
 async def get_machines():
+
     try:
-        # Here you would integrate with PostgreSQL
-        # machines = await DatabaseService.getMachineMetadata()
-        
-        # Return mock data for now
-        machines = [
-            {
-                "id": "MACHINE_01",
-                "name": "Hydrapulper HC-2000",
-                "type": "hydrapulper",
-                "location": "Stock Prep",
-                "health": 88.5,
-                "rul": 283.2,
-                "efficiency": 85.3,
-                "maintenanceUrgency": "low"
-            },
-            {
-                "id": "MACHINE_02", 
-                "name": "Continuous Digester CD-1200",
-                "type": "digester",
-                "location": "Pulping",
-                "health": 92.1,
-                "rul": 156.8,
-                "efficiency": 78.9,
-                "maintenanceUrgency": "medium"
-            }
-        ]
-        
-        print(f"📋 Retrieved {len(machines)} machines")
-        return {"machines": machines, "count": len(machines)}
-    
+
+        query = f'''
+        from(bucket: "{os.getenv("INFLUX_BUCKET")}")
+          |> range(start: -1m)
+          |> filter(fn: (r) => r["_measurement"] == "machine_metrics_v2")
+          |> filter(fn: (r) => r["_field"] != "risk_score")
+          |> filter(fn: (r) => r["_field"] != "risk_label")
+          |> last()
+        '''
+
+        result = query_api.query(
+            org=os.getenv("INFLUX_ORG"),
+            query=query
+        )
+
+        machines = {}
+
+        for table in result:
+            for record in table.records:
+
+                machine = record.values.get("machine")
+                field = record.get_field()
+
+                if machine not in machines:
+                    machines[machine] = {
+                        "machine": machine,
+                        "time": str(record.get_time())
+                    }
+
+                machines[machine][field] = record.get_value()
+
+        machine_list = list(machines.values())
+
+        print(f"📋 Retrieved {len(machine_list)} machines")
+
+        return {
+            "machines": machine_list,
+            "count": len(machine_list)
+        }
+
     except Exception as e:
         print(f"❌ Error retrieving machines: {e}")
         raise HTTPException(status_code=500, detail=str(e))

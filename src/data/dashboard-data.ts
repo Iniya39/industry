@@ -2,6 +2,19 @@ export type Accent = "blue" | "green" | "orange" | "red";
 export type Severity = "Critical" | "High" | "Medium";
 export type MachineStatus = "Good" | "Warning" | "Critical" | "Moderate";
 
+export type SensorDetail = {
+  name: string;
+  critical?: boolean;
+};
+
+export type SensorGroup = {
+  id: string;
+  label: string;
+  emoji: string;
+  sensors: SensorDetail[];
+  note?: string;
+};
+
 export const statCards = [
   {
     title: "Anomalies Detected",
@@ -97,6 +110,125 @@ export const machines = [
   { id: "Machine 07", name: "Dryer Cylinders DC-600", area: "Drying", health: 66, status: "Warning" as MachineStatus, rul: "18 h", load: "82%", vibration: "3.7 mm/s", engineer: "Karan Gill" },
   { id: "Machine 12", name: "Soft Calender SC-500", area: "Finishing", health: 81, status: "Good" as MachineStatus, rul: "24 h", load: "64%", vibration: "2.0 mm/s", engineer: "Arjun Mehta" },
   { id: "Machine 14", name: "Paper Machine PM-1", area: "Formation", health: 91, status: "Good" as MachineStatus, rul: "31 h", load: "59%", vibration: "1.5 mm/s", engineer: "Sara Khan" }
+];
+
+export const sensorGroups: SensorGroup[] = [
+  {
+    id: "hydrapulper",
+    emoji: "🔥",
+    label: "Hydrapulper Sensors",
+    sensors: [
+      { name: "temperature_c" },
+      { name: "motor_current_a" },
+      { name: "voltage_v" },
+      { name: "power_kw" },
+      { name: "pulp_level_pct" },
+      { name: "water_flow_m3hr" },
+      { name: "consistency_pct", critical: true },
+      { name: "vibration_mms" },
+      { name: "rotor_speed_rpm" }
+    ]
+  },
+  {
+    id: "digester",
+    emoji: "🔥",
+    label: "Digester Sensors",
+    sensors: [
+      { name: "top_temp_c" },
+      { name: "bottom_temp_c", critical: true },
+      { name: "pressure_bar" },
+      { name: "liquor_flow_m3hr" },
+      { name: "chip_level_pct" },
+      { name: "ph" },
+      { name: "digester_consistency_pct" },
+      { name: "density_gcm3" },
+      { name: "steam_flow_kghr" }
+    ]
+  },
+  {
+    id: "pressure-screen",
+    emoji: "🌀",
+    label: "Pressure Screen Sensors",
+    sensors: [
+      { name: "inlet_pressure_bar" },
+      { name: "outlet_pressure_bar" },
+      { name: "differential_pressure_bar", critical: true },
+      { name: "flow_m3hr" },
+      { name: "consistency_pct" },
+      { name: "vibration_mms" },
+      { name: "motor_current_a" }
+    ]
+  },
+  {
+    id: "paper-machine",
+    emoji: "📄",
+    label: "Paper Machine Sensors",
+    sensors: [
+      { name: "speed_mpm" },
+      { name: "moisture_pct", critical: true },
+      { name: "basis_weight_gsm" },
+      { name: "thickness_mm", critical: true },
+      { name: "web_tension_n" },
+      { name: "temperature_c" },
+      { name: "stock_flow_m3hr" },
+      { name: "headbox_pressure_bar" },
+      { name: "vibration_mms" }
+    ]
+  },
+  {
+    id: "dryer",
+    emoji: "🔥",
+    label: "Dryer Sensors",
+    sensors: [
+      { name: "cyl1_temp_c" },
+      { name: "cyl2_temp_c" },
+      { name: "condensate_level_pct" },
+      { name: "steam_pressure_bar" },
+      { name: "steam_flow_kghr" },
+      { name: "inlet_moisture_pct" },
+      { name: "outlet_moisture_pct", critical: true },
+      { name: "speed_mpm" },
+      { name: "humidity_pct" },
+      { name: "vibration_mms" }
+    ]
+  },
+  {
+    id: "calender",
+    emoji: "🧱",
+    label: "Calender Sensors",
+    sensors: [
+      { name: "nip_pressure_knpm" },
+      { name: "roll_temp_c" },
+      { name: "thickness_mm", critical: true },
+      { name: "smoothness_pct" },
+      { name: "speed_mpm" },
+      { name: "load_tons" },
+      { name: "vibration_mms" }
+    ]
+  },
+  {
+    id: "cooling-system",
+    emoji: "❄️",
+    label: "Cooling System Sensors",
+    note: "Shared block",
+    sensors: [
+      { name: "coolant_in_temp_c" },
+      { name: "coolant_out_temp_c" },
+      { name: "coolant_flow_lpm" },
+      { name: "pump_current_a" },
+      { name: "coolant_pressure_bar" },
+      { name: "cooling_efficiency_delta_t" }
+    ]
+  }
+];
+
+export const criticalSensors = [
+  { machine: "Hydrapulper", sensor: "consistency_pct" },
+  { machine: "Digester", sensor: "bottom_temp_c" },
+  { machine: "Pressure Screen", sensor: "differential_pressure_bar" },
+  { machine: "Paper Machine", sensor: "moisture_pct" },
+  { machine: "Dryer", sensor: "outlet_moisture_pct" },
+  { machine: "Calender", sensor: "thickness_mm" }
 ];
 
 export const alertTimeline = [
